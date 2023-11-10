@@ -54,9 +54,7 @@ if api_key:
 
     if mode == "音声合成":
         st.header("音声合成")
-        audio_prompt = st.text_input(
-            "Enter your prompt:", value="エンジニアにとって再利用性・汎用性の高い情報が集まる場をつくろう"
-        )
+        audio_prompt = st.text_input("Enter your prompt:")
         model = st.selectbox("Model", options=["tts-1", "tts-1-hd"])
         voice = st.selectbox(
             "Voice", options=["alloy", "echo", "fable", "onyx", "nova", "shimmer"]
