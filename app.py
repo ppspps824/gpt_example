@@ -1,10 +1,9 @@
 import base64
+import io
 
 import openai
 import requests
 import streamlit as st
-
-# openai.api_key = st.secrets["OPEN_AI_KEY"]
 
 if "all_text" not in st.session_state:
     st.session_state.all_text = []
@@ -12,14 +11,14 @@ if "all_text" not in st.session_state:
 with st.sidebar:
     st.title("OpenAI API Examples")
     api_key = st.text_input("OPEN_AI_KEY")
-    mode = st.selectbox("モードを選択", options=["チャット", "画像生成", "画像入力"])
+    mode = st.selectbox("モードを選択", options=["チャット", "音声合成", "画像生成", "画像入力"])
 
 if api_key:
     openai.api_key = api_key
 
     if mode == "チャット":
         # GPT-4 Turbo Example
-        st.header("GPT-4 Turbo Text Completion")
+        st.header("GPT-4 Turbo チャット")
         user_prompt = st.chat_input("user:")
         assistant_text = ""
 
@@ -53,10 +52,32 @@ if api_key:
                 {"role": "assistant", "content": assistant_text}
             )
 
+    if mode == "音声合成":
+        st.header("音声合成")
+        audio_prompt = st.text_input(
+            "Enter your prompt:", value="エンジニアにとって再利用性・汎用性の高い情報が集まる場をつくろう"
+        )
+        model = st.selectbox("Model", options=["tts-1", "tts-1-hd"])
+        voice = st.selectbox(
+            "Voice", options=["alloy", "echo", "fable", "onyx", "nova", "shimmer"]
+        )
+
+        if audio_prompt:
+            response = openai.audio.speech.create(
+                model=model,
+                voice=voice,
+                input=audio_prompt,
+            )
+
+            # Convert the binary response content to a byte stream
+            byte_stream = io.BytesIO(response.content)
+
+            st.audio(byte_stream)
+
     if mode == "画像生成":
         # Image Generation Example
-        st.header("Image Generation")
-        image_prompt = st.text_input("Enter your prompt for image generation:")
+        st.header("画像生成")
+        image_prompt = st.text_input("Enter your prompt:")
         hight = st.number_input("hight", value=512, min_value=128)
         width = st.number_input("width", value=512, min_value=128)
         if st.button("Generate Image"):
@@ -72,11 +93,11 @@ if api_key:
 
     if mode == "画像入力":
         # Image Input Example
-        st.header("Image Input")
+        st.header("画像入力")
         uploaded_file = st.file_uploader(
             "Upload an image to analyze", type=["jpg", "jpeg", "png"]
         )
-        prompt = st.text_input("Enter your prompt for GPT-4 Vision:")
+        prompt = st.text_input("Enter your prompt:")
         if uploaded_file:
             st.image(uploaded_file)
             payload = {
@@ -106,4 +127,4 @@ if api_key:
                 ).json()
                 st.write(response["choices"][0]["message"]["content"])
 else:
-    st.info("OPEN_AI_KEYを入力してください。")
+    st.info("👈OPEN_AI_KEYを入力してください。")
