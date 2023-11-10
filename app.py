@@ -97,7 +97,7 @@ if api_key:
         uploaded_file = st.file_uploader(
             "Upload an image to analyze", type=["jpg", "jpeg", "png"]
         )
-        prompt = st.text_input("Enter your prompt:")
+        input_image_prompt = st.text_input("Enter your prompt:")
         if uploaded_file:
             st.image(uploaded_file)
             payload = {
@@ -106,7 +106,7 @@ if api_key:
                     {
                         "role": "user",
                         "content": [
-                            {"type": "text", "text": prompt},
+                            {"type": "text", "text": input_image_prompt},
                             {
                                 "type": "image_url",
                                 "image_url": {
