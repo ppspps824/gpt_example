@@ -10,7 +10,7 @@ if "all_text" not in st.session_state:
 
 with st.sidebar:
     st.title("OpenAI API Examples")
-    api_key = st.text_input("OPEN_AI_KEY")
+    api_key = st.text_input("OPEN_AI_KEY", type="password")
     mode = st.selectbox("モードを選択", options=["チャット", "音声合成", "画像生成", "画像入力"])
 
 if api_key:
