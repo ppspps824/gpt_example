@@ -54,7 +54,7 @@ if api_key:
 
     if mode == "音声合成":
         st.header("音声合成")
-        audio_prompt = st.text_input("Enter your prompt:")
+        audio_prompt = st.text_input("Enter your prompt:", key="audio_prompt")
         model = st.selectbox("Model", options=["tts-1", "tts-1-hd"])
         voice = st.selectbox(
             "Voice", options=["alloy", "echo", "fable", "onyx", "nova", "shimmer"]
@@ -75,7 +75,7 @@ if api_key:
     if mode == "画像生成":
         # Image Generation Example
         st.header("画像生成")
-        image_prompt = st.text_input("Enter your prompt:")
+        image_prompt = st.text_input("Enter your prompt:", key="image_prompt")
         hight = st.number_input("hight", value=512, min_value=128)
         width = st.number_input("width", value=512, min_value=128)
         if st.button("Generate Image"):
@@ -95,7 +95,9 @@ if api_key:
         uploaded_file = st.file_uploader(
             "Upload an image to analyze", type=["jpg", "jpeg", "png"]
         )
-        input_image_prompt = st.text_input("Enter your prompt:")
+        input_image_prompt = st.text_input(
+            "Enter your prompt:", key="input_image_prompt"
+        )
         if uploaded_file:
             st.image(uploaded_file)
             payload = {
