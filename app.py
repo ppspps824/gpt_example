@@ -79,9 +79,9 @@ if api_key:
 
         col1, col2 = st.columns(2)
         with col1:
-            hight = st.number_input("hight", value=512, min_value=128)
+            hight = st.number_input("hight", value=512, min_value=512)
         with col2:
-            width = st.number_input("width", value=512, min_value=128)
+            width = st.number_input("width", value=512, min_value=512)
 
         if image_mode == "生成":
             image_prompt = st.text_input("Enter your prompt:", key="image_prompt")
