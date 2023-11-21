@@ -75,16 +75,66 @@ if api_key:
     if mode == "画像生成":
         # Image Generation Example
         st.header("画像生成")
-        image_prompt = st.text_input("Enter your prompt:", key="image_prompt")
-        hight = st.number_input("hight", value=512, min_value=128)
-        width = st.number_input("width", value=512, min_value=128)
-        if st.button("Generate Image"):
-            if image_prompt:
-                response = openai.images.generate(
+        image_mode = st.selectbox("Mode", options=["生成", "編集", "バリエーション"])
+
+        col1, col2 = st.columns(2)
+        with col1:
+            hight = st.number_input("hight", value=512, min_value=128)
+        with col2:
+            width = st.number_input("width", value=512, min_value=128)
+
+        if image_mode == "生成":
+            image_prompt = st.text_input("Enter your prompt:", key="image_prompt")
+
+            if st.button("Generate Image"):
+                if image_prompt:
+                    response = openai.images.generate(
+                        model="dall-e-3",
+                        prompt=image_prompt,
+                        size=f"{hight}x{width}",
+                        quality="standard",
+                        n=1,
+                    )
+                    image_url = response.data[0].url
+                    st.image(image_url)
+
+        elif image_mode == "編集":
+            image_prompt = st.text_input("Enter your prompt:", key="image_prompt")
+
+            with col1:
+                st.write("Base Image")
+                base_image = st.file_uploader(
+                    "Upload an base image", type=["jpg", "jpeg", "png"]
+                )
+                st.write(base_image)
+            with col2:
+                st.write("Mask Image")
+                mask_image = st.file_uploader(
+                    "Upload an mask image", type=["jpg", "jpeg", "png"]
+                )
+                st.write(mask_image)
+
+            if st.button("Generate Image"):
+                response = openai.images.edit(
+                    model="dall-e-2",
+                    image=base_image,
+                    mask=mask_image,
                     prompt=image_prompt,
-                    size=f"{hight}x{width}",
-                    quality="standard",
                     n=1,
+                    size=f"{hight}x{width}",
+                )
+                image_url = response.data[0].url
+                st.image(image_url)
+
+        elif image_mode == "バリエーション":
+            base_image = st.file_uploader(
+                "Upload an base image", type=["jpg", "jpeg", "png"]
+            )
+            if st.button("Generate Image"):
+                response = openai.images.create_variation(
+                    image=base_image,
+                    n=2,
+                    size=f"{hight}x{width}",
                 )
                 image_url = response.data[0].url
                 st.image(image_url)
