@@ -130,6 +130,8 @@ if api_key:
             base_image = st.file_uploader(
                 "Upload an base image", type=["jpg", "jpeg", "png"]
             )
+            st.write(base_image)
+
             if st.button("Generate Image"):
                 response = openai.images.create_variation(
                     image=base_image,
