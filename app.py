@@ -259,18 +259,20 @@ if api_key:
 
         if st.button("Submit"):
             if wav_audio_data:
-                temp_file = NamedTemporaryFile()
-                temp_file.write(wav_audio_data)
+                with NamedTemporaryFile(
+                    delete=False, suffix=f".{upload_file.type.split('/')[1]}"
+                ) as temp_file:
+                    temp_file.write(wav_audio_data)
+                    temp_file.flush()
 
-                with open(temp_file.name, "rb") as audio_file:
-                    with st.spinner("生成中..."):
-                        transcript = openai.audio.transcriptions.create(
-                            model="whisper-1", file=audio_file, response_format="text"
-                        )
-                        st.write(transcript)
+                    with open(temp_file.name, "rb") as audio_file:
+                        with st.spinner("生成中..."):
+                            transcript = openai.audio.transcriptions.create(
+                                model="whisper-1",
+                                file=audio_file,
+                                response_format="text",
+                            )
+                            st.write(transcript)
 
-                temp_file.flush()
-                temp_file.close()
-                os.unlink(temp_file.name)
 else:
     st.info("👈OPEN_AI_KEYを入力してください。")
