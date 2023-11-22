@@ -10,6 +10,8 @@ from PIL import Image, ImageOps
 from st_audiorec import st_audiorec
 from streamlit_drawable_canvas import st_canvas
 
+st.set_page_config(layout="wide")
+
 
 def image_config():
     col1, col2 = st.columns(2)
