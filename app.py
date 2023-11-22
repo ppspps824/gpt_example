@@ -35,7 +35,7 @@ if "all_text" not in st.session_state:
 with st.sidebar:
     st.title("OpenAI API Examples")
     api_key = st.text_input("OPEN_AI_KEY", type="password")
-    mode = st.selectbox("モードを選択", options=["チャット", "音声合成", "音声認識", "画像生成", "画像入力"])
+    mode = st.selectbox("モードを選択", options=["チャット", "音声合成", "音声認識", "画像生成", "画像認識"])
 
 if api_key:
     openai.api_key = api_key
@@ -203,7 +203,7 @@ if api_key:
                     for image_url in images:
                         st.image(image_url)
 
-    if mode == "画像入力":
+    if mode == "画像認識":
         uploaded_file = st.file_uploader(
             "Upload an image to analyze", type=["jpg", "jpeg", "png"]
         )
