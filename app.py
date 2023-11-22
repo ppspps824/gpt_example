@@ -230,7 +230,7 @@ if api_key:
                 ],
                 "max_tokens": 300,
             }
-        if st.button("Enter your prompt:"):
+        if st.button("Submit"):
             if uploaded_file:
                 response = requests.post(
                     "https://api.openai.com/v1/chat/completions",
