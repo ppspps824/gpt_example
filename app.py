@@ -248,11 +248,18 @@ if api_key:
                     st.write(response["choices"][0]["message"]["content"])
 
     if mode == "音声認識":
-        wav_audio_data = st_audiorec()
+        audio_mode = st.selectbox("Mode", options=["Recording", "File"])
 
-        if wav_audio_data is not None:
-            if st.button("Submit"):
-                temp_file = NamedTemporaryFile(delete=False, suffix=".wav")
+        if audio_mode == "Recording":
+            wav_audio_data = st_audiorec()
+        elif audio_mode == "File":
+            if upload_file := st.file_uploader("Audio", ["mp3", "wav"]):
+                st.audio(upload_file)
+                wav_audio_data = upload_file.getvalue()
+
+        if st.button("Submit"):
+            if wav_audio_data:
+                temp_file = NamedTemporaryFile()
                 temp_file.write(wav_audio_data)
 
                 with open(temp_file.name, "rb") as audio_file:
