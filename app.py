@@ -4,6 +4,30 @@ import io
 import openai
 import requests
 import streamlit as st
+from PIL import Image, ImageOps
+from streamlit_drawable_canvas import st_canvas
+
+
+def image_config():
+    col1, col2 = st.columns(2)
+
+    with col1:
+        size = st.selectbox("Size", options=["256x256", "512x512", "1024x1024"])
+    with col2:
+        num = st.number_input("Number of generation", step=1, min_value=1, max_value=5)
+
+    if size == "256x256":
+        height = 256
+        width = 256
+    elif size == "512x512":
+        height = 512
+        width = 512
+    elif size == "1024x1024":
+        height = 1024
+        width = 1024
+
+    return num, height, width
+
 
 if "all_text" not in st.session_state:
     st.session_state.all_text = []
@@ -11,14 +35,12 @@ if "all_text" not in st.session_state:
 with st.sidebar:
     st.title("OpenAI API Examples")
     api_key = st.text_input("OPEN_AI_KEY", type="password")
-    mode = st.selectbox("モードを選択", options=["チャット", "音声合成", "画像生成", "画像入力"])
+    mode = st.selectbox("モードを選択", options=["チャット", "音声合成", "音声認識", "画像生成", "画像入力"])
 
 if api_key:
     openai.api_key = api_key
 
     if mode == "チャット":
-        # GPT-4 Turbo Example
-        st.header("GPT-4 Turbo チャット")
         user_prompt = st.chat_input("user:")
         assistant_text = ""
 
@@ -53,7 +75,6 @@ if api_key:
             )
 
     if mode == "音声合成":
-        st.header("音声合成")
         audio_prompt = st.text_input("Enter your prompt:", key="audio_prompt")
         model = st.selectbox("Model", options=["tts-1", "tts-1-hd"])
         voice = st.selectbox(
@@ -73,17 +94,13 @@ if api_key:
             st.audio(byte_stream)
 
     if mode == "画像生成":
-        # Image Generation Example
-        st.header("画像生成")
-        image_mode = st.selectbox("Mode", options=["生成", "編集", "バリエーション"])
+        image_mode = st.selectbox(
+            "Mode", options=["Generation", "In Painting", "Variation"]
+        )
 
-        col1, col2 = st.columns(2)
-        with col1:
-            hight = st.number_input("hight", value=512, min_value=512)
-        with col2:
-            width = st.number_input("width", value=512, min_value=512)
-
-        if image_mode == "生成":
+        if image_mode == "Generation":
+            height = 1024
+            width = 1024
             image_prompt = st.text_input("Enter your prompt:", key="image_prompt")
 
             if st.button("Generate Image"):
@@ -91,62 +108,102 @@ if api_key:
                     response = openai.images.generate(
                         model="dall-e-3",
                         prompt=image_prompt,
-                        size=f"{hight}x{width}",
+                        size=f"{height}x{width}",
                         quality="standard",
                         n=1,
                     )
                     image_url = response.data[0].url
                     st.image(image_url)
 
-        elif image_mode == "編集":
+        elif image_mode == "In Painting":
+            num, height, width = image_config()
             image_prompt = st.text_input("Enter your prompt:", key="image_prompt")
 
-            with col1:
-                st.write("Base Image")
-                base_image = st.file_uploader(
-                    "Upload an base image", type=["jpg", "jpeg", "png"]
-                )
-                if base_image:
-                    st.image(base_image)
-            with col2:
-                st.write("Mask Image")
-                mask_image = st.file_uploader(
-                    "Upload an mask image", type=["jpg", "jpeg", "png"]
-                )
-                if mask_image:
-                    st.image(mask_image)
+            base_image = st.file_uploader("Image", ["jpg", "png"])
+            col1, col2 = st.columns(2)
+            if base_image:
+                image = Image.open(base_image).convert("RGBA")
+                image = image.resize((width, height))
 
-            if st.button("Generate Image"):
-                response = openai.images.edit(
-                    model="dall-e-2",
-                    image=base_image,
-                    mask=mask_image,
-                    prompt=image_prompt,
-                    n=1,
-                    size=f"{hight}x{width}",
-                )
-                image_url = response.data[0].url
-                st.image(image_url)
+                with col1:
+                    st.write("Original")
+                    st.image(image)
 
-        elif image_mode == "バリエーション":
+                fill_color = "rgba(255, 255, 255, 0.0)"
+                stroke_width = st.number_input(
+                    "Brush Size", value=64, min_value=1, max_value=100
+                )
+                stroke_color = "rgba(255, 255, 255, 1.0)"
+                bg_color = "rgba(0, 0, 0, 1.0)"
+                drawing_mode = "freedraw"
+
+                with col2:
+                    st.write("Mask")
+                    canvas_result = st_canvas(
+                        fill_color=fill_color,
+                        stroke_width=stroke_width,
+                        stroke_color=stroke_color,
+                        background_color=bg_color,
+                        background_image=image,
+                        update_streamlit=True,
+                        height=height,
+                        width=width,
+                        drawing_mode=drawing_mode,
+                        key="canvas",
+                    )
+                if canvas_result:
+                    mask = canvas_result.image_data
+                    mask = Image.fromarray(mask.astype("uint8"), mode="RGBA")
+
+                    inverted_mask = ImageOps.invert(mask.split()[3])
+                    back_im = image.copy()
+                    back_im.putalpha(inverted_mask)
+
+                    buffered = io.BytesIO()
+                    image.save(buffered, format="PNG")
+                    image = buffered.getvalue()
+
+                    buffered.seek(0)
+                    back_im.save(buffered, format="PNG")
+                    mask_data = buffered.getvalue()
+
+                    if st.button("Generate Image"):
+                        response = openai.images.edit(
+                            model="dall-e-2",
+                            image=image,
+                            mask=mask_data,
+                            prompt=image_prompt,
+                            n=num,
+                            size=f"{height}x{width}",
+                        )
+
+                        images = [data.url for data in response.data]
+                        for image_url in images:
+                            st.image(image_url)
+
+        elif image_mode == "Variation":
+            num, height, width = image_config()
+
             base_image = st.file_uploader(
                 "Upload an base image", type=["jpg", "jpeg", "png"]
             )
             if base_image:
+                image = Image.open(base_image)
+                image = image.resize((width, height))
                 st.image(base_image)
 
-            if st.button("Generate Image"):
-                response = openai.images.create_variation(
-                    image=base_image,
-                    n=2,
-                    size=f"{hight}x{width}",
-                )
-                image_url = response.data[0].url
-                st.image(image_url)
+                if st.button("Generate Image"):
+                    response = openai.images.create_variation(
+                        image=base_image,
+                        n=num,
+                        size=f"{height}x{width}",
+                    )
+                    images = [data.url for data in response.data]
+
+                    for image_url in images:
+                        st.image(image_url)
 
     if mode == "画像入力":
-        # Image Input Example
-        st.header("画像入力")
         uploaded_file = st.file_uploader(
             "Upload an image to analyze", type=["jpg", "jpeg", "png"]
         )
@@ -173,7 +230,7 @@ if api_key:
                 ],
                 "max_tokens": 300,
             }
-        if st.button("Analyze Image"):
+        if st.button("Enter your prompt:"):
             if uploaded_file:
                 response = requests.post(
                     "https://api.openai.com/v1/chat/completions",
@@ -181,5 +238,9 @@ if api_key:
                     json=payload,
                 ).json()
                 st.write(response["choices"][0]["message"]["content"])
+
+    if mode == "音声認識":
+        st.write("作成中⛏")
+
 else:
     st.info("👈OPEN_AI_KEYを入力してください。")
