@@ -3,3 +3,4 @@ streamlit
 requests
 streamlit_drawable_canvas
 Pillow
+streamlit-audiorec

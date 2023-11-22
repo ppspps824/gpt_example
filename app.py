@@ -1,10 +1,13 @@
 import base64
 import io
+import os
+from tempfile import NamedTemporaryFile
 
 import openai
 import requests
 import streamlit as st
 from PIL import Image, ImageOps
+from st_audiorec import st_audiorec
 from streamlit_drawable_canvas import st_canvas
 
 
@@ -82,16 +85,17 @@ if api_key:
         )
 
         if audio_prompt:
-            response = openai.audio.speech.create(
-                model=model,
-                voice=voice,
-                input=audio_prompt,
-            )
+            with st.spinner("生成中..."):
+                response = openai.audio.speech.create(
+                    model=model,
+                    voice=voice,
+                    input=audio_prompt,
+                )
 
-            # Convert the binary response content to a byte stream
-            byte_stream = io.BytesIO(response.content)
+                # Convert the binary response content to a byte stream
+                byte_stream = io.BytesIO(response.content)
 
-            st.audio(byte_stream)
+                st.audio(byte_stream)
 
     if mode == "画像生成":
         image_mode = st.selectbox(
@@ -105,15 +109,16 @@ if api_key:
 
             if st.button("Generate Image"):
                 if image_prompt:
-                    response = openai.images.generate(
-                        model="dall-e-3",
-                        prompt=image_prompt,
-                        size=f"{height}x{width}",
-                        quality="standard",
-                        n=1,
-                    )
-                    image_url = response.data[0].url
-                    st.image(image_url)
+                    with st.spinner("生成中..."):
+                        response = openai.images.generate(
+                            model="dall-e-3",
+                            prompt=image_prompt,
+                            size=f"{height}x{width}",
+                            quality="standard",
+                            n=1,
+                        )
+                        image_url = response.data[0].url
+                        st.image(image_url)
 
         elif image_mode == "In Painting":
             num, height, width = image_config()
@@ -168,18 +173,19 @@ if api_key:
                     mask_data = buffered.getvalue()
 
                     if st.button("Generate Image"):
-                        response = openai.images.edit(
-                            model="dall-e-2",
-                            image=image,
-                            mask=mask_data,
-                            prompt=image_prompt,
-                            n=num,
-                            size=f"{height}x{width}",
-                        )
+                        with st.spinner("生成中..."):
+                            response = openai.images.edit(
+                                model="dall-e-2",
+                                image=image,
+                                mask=mask_data,
+                                prompt=image_prompt,
+                                n=num,
+                                size=f"{height}x{width}",
+                            )
 
-                        images = [data.url for data in response.data]
-                        for image_url in images:
-                            st.image(image_url)
+                            images = [data.url for data in response.data]
+                            for image_url in images:
+                                st.image(image_url)
 
         elif image_mode == "Variation":
             num, height, width = image_config()
@@ -193,15 +199,16 @@ if api_key:
                 st.image(base_image)
 
                 if st.button("Generate Image"):
-                    response = openai.images.create_variation(
-                        image=base_image,
-                        n=num,
-                        size=f"{height}x{width}",
-                    )
-                    images = [data.url for data in response.data]
+                    with st.spinner("生成中..."):
+                        response = openai.images.create_variation(
+                            image=base_image,
+                            n=num,
+                            size=f"{height}x{width}",
+                        )
+                        images = [data.url for data in response.data]
 
-                    for image_url in images:
-                        st.image(image_url)
+                        for image_url in images:
+                            st.image(image_url)
 
     if mode == "画像認識":
         uploaded_file = st.file_uploader(
@@ -232,15 +239,31 @@ if api_key:
             }
         if st.button("Submit"):
             if uploaded_file:
-                response = requests.post(
-                    "https://api.openai.com/v1/chat/completions",
-                    headers={"Authorization": f"Bearer {openai.api_key}"},
-                    json=payload,
-                ).json()
-                st.write(response["choices"][0]["message"]["content"])
+                with st.spinner("生成中..."):
+                    response = requests.post(
+                        "https://api.openai.com/v1/chat/completions",
+                        headers={"Authorization": f"Bearer {openai.api_key}"},
+                        json=payload,
+                    ).json()
+                    st.write(response["choices"][0]["message"]["content"])
 
     if mode == "音声認識":
-        st.write("作成中⛏")
+        wav_audio_data = st_audiorec()
 
+        if wav_audio_data is not None:
+            if st.button("Submit"):
+                temp_file = NamedTemporaryFile(delete=False, suffix=".wav")
+                temp_file.write(wav_audio_data)
+
+                with open(temp_file.name, "rb") as audio_file:
+                    with st.spinner("生成中..."):
+                        transcript = openai.audio.transcriptions.create(
+                            model="whisper-1", file=audio_file, response_format="text"
+                        )
+                        st.write(transcript)
+
+                temp_file.flush()
+                temp_file.close()
+                os.unlink(temp_file.name)
 else:
     st.info("👈OPEN_AI_KEYを入力してください。")
