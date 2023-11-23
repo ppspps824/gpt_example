@@ -241,12 +241,14 @@ if api_key:
                 image = canvas_result.image_data
                 image = Image.fromarray(image.astype("uint8"), mode="RGBA")
 
+            input_prompt = st.text_area("prompt:")
+
             if st.button("Upgrade Image"):
                 if image:
                     buffered = io.BytesIO()
                     image.save(buffered, format="PNG")
                     image = buffered.getvalue()
-                    base_prompt = "あなたの役割は入力された画像を理解し、より詳細な画像を生成するためのプロンプトテキストを生成することです。画像が非常に簡素なものであってもできる限りの特徴を捉え、最大限に想像力を働かせて表現してください。説明等は不要ですので、必ずプロンプトテキストのみ出力してください。"
+                    base_prompt = "あなたの役割は入力された画像を理解し、より詳細な画像を生成するためのプロンプトテキストを生成することです。画像が非常に簡素なものであってもできる限りの特徴を捉え、最大限に想像力を働かせて表現してください。説明等は不要ですので、必ずプロンプトテキストのみ出力してください。この画像の作者からの説明：{input_prompt}"
                     payload = {
                         "model": "gpt-4-vision-preview",
                         "messages": [
