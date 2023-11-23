@@ -99,7 +99,7 @@ if api_key:
 
     if mode == "画像生成":
         image_mode = st.selectbox(
-            "Mode", options=["Generation", "In Painting", "Variation"]
+            "Mode", options=["Generation", "In Painting", "Variation", "Upgrade"]
         )
 
         if image_mode == "Generation":
@@ -188,57 +188,16 @@ if api_key:
                                 st.image(image_url)
 
         elif image_mode == "Variation":
-            variation_mode = st.selectbox("Variation Mode", options=["Draw", "File"])
             num, height, width = image_config()
-            image = None
-
-            if variation_mode == "Draw":
-                drawing_mode = st.selectbox("Drawing tool:", ("freedraw", "transform"))
-                stroke_width = st.slider("Stroke width: ", 1, 25, 3)
-
-                if drawing_mode == "point":
-                    point_display_radius = st.slider("Point display radius: ", 1, 25, 3)
-                stroke_color = st.color_picker("Stroke color hex: ")
-                bg_color = st.color_picker("Background color hex: ", "#eee")
-
-                background_image = None
-                bg_image = st.file_uploader("Background image:", type=["png", "jpg"])
-                if bg_image:
-                    background_image = Image.open(bg_image)
-
-                canvas_result = st_canvas(
-                    fill_color="rgba(255, 255, 255, 1.0)",  # Fixed fill color with some opacity
-                    stroke_width=stroke_width,
-                    stroke_color=stroke_color,
-                    background_color=bg_color,
-                    background_image=background_image,
-                    update_streamlit=True,
-                    height=height,
-                    width=width,
-                    drawing_mode=drawing_mode,
-                    point_display_radius=point_display_radius
-                    if drawing_mode == "point"
-                    else 0,
-                    key="canvas",
-                )
-                if canvas_result:
-                    image = canvas_result.image_data
-
-                    if background_image:
-                        image = background_image.paste(image)
-                    image = Image.fromarray(image.astype("uint8"), mode="RGBA")
-
-            elif variation_mode == "File":
-                image = st.file_uploader(
-                    "Upload an base image", type=["jpg", "jpeg", "png"]
-                )
-                if image:
-                    st.image(image)
-                    image = Image.open(image)
-                    image = image.resize((width, height))
+            image = st.file_uploader(
+                "Upload an base image", type=["jpg", "jpeg", "png"]
+            )
+            if image:
+                st.image(image)
+                image = Image.open(image)
+                image = image.resize((width, height))
 
             if st.button("Generate Image"):
-                print(type(image))
                 if image:
                     buffered = io.BytesIO()
                     image.save(buffered, format="PNG")
@@ -254,12 +213,85 @@ if api_key:
                         for image_url in images:
                             st.image(image_url)
 
+        elif image_mode == "Upgrade":
+            height = 1024
+            width = 1024
+            drawing_mode = st.selectbox("Drawing tool:", ("freedraw", "transform"))
+            stroke_width = st.slider("Stroke width: ", 1, 25, 3)
+
+            if drawing_mode == "point":
+                point_display_radius = st.slider("Point display radius: ", 1, 25, 3)
+            stroke_color = st.color_picker("Stroke color hex: ")
+            bg_color = st.color_picker("Background color hex: ", "#eee")
+            canvas_result = st_canvas(
+                fill_color="rgba(255, 255, 255, 1.0)",  # Fixed fill color with some opacity
+                stroke_width=stroke_width,
+                stroke_color=stroke_color,
+                background_color=bg_color,
+                update_streamlit=True,
+                height=512,
+                width=512,
+                drawing_mode=drawing_mode,
+                point_display_radius=point_display_radius
+                if drawing_mode == "point"
+                else 0,
+                key="canvas",
+            )
+            if canvas_result:
+                image = canvas_result.image_data
+                image = Image.fromarray(image.astype("uint8"), mode="RGBA")
+
+            if st.button("Upgrade Image"):
+                if image:
+                    buffered = io.BytesIO()
+                    image.save(buffered, format="PNG")
+                    image = buffered.getvalue()
+                    base_prompt = "あなたの役割は入力された画像を理解し、より詳細な画像を生成するためのプロンプトテキストを生成することです。画像が非常に簡素なものであってもできる限りの特徴を捉え、最大限に想像力を働かせて表現してください。説明等は不要ですので、必ずプロンプトテキストのみ出力してください。"
+                    payload = {
+                        "model": "gpt-4-vision-preview",
+                        "messages": [
+                            {
+                                "role": "user",
+                                "content": [
+                                    {"type": "text", "text": base_prompt},
+                                    {
+                                        "type": "image_url",
+                                        "image_url": {
+                                            "url": f"data:image/jpeg;base64,{base64.b64encode(image).decode()}"
+                                        },
+                                    },
+                                ],
+                            }
+                        ],
+                        "max_tokens": 300,
+                    }
+                    with st.spinner("生成中..."):
+                        response = requests.post(
+                            "https://api.openai.com/v1/chat/completions",
+                            headers={"Authorization": f"Bearer {openai.api_key}"},
+                            json=payload,
+                        ).json()
+                        response_text = response["choices"][0]["message"]["content"]
+                        st.write(response_text)
+                        response = openai.images.generate(
+                            model="dall-e-3",
+                            prompt=response_text,
+                            size=f"{height}x{width}",
+                            quality="standard",
+                            n=1,
+                        )
+                        images = [data.url for data in response.data]
+
+                        for image_url in images:
+                            st.image(image_url)
+
     if mode == "画像認識":
         uploaded_file = st.file_uploader(
             "Upload an image to analyze", type=["jpg", "jpeg", "png"]
         )
-        input_image_prompt = st.text_input(
-            "Enter your prompt:", key="input_image_prompt"
+        base_prompt = "Please describe in detail what the image looks like.Look carefully at the number of objects, type (human, animal, object, etc.), expression, background, location, country, brightness, weather and time of day, indoor or outdoor, period, and atmosphere."
+        input_image_prompt = st.text_area(
+            "Enter your prompt:", key="input_image_prompt", value=base_prompt
         )
         if uploaded_file:
             st.image(uploaded_file)
