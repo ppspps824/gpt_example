@@ -188,20 +188,64 @@ if api_key:
                                 st.image(image_url)
 
         elif image_mode == "Variation":
+            variation_mode = st.selectbox("Variation Mode", options=["Draw", "File"])
             num, height, width = image_config()
+            image = None
 
-            base_image = st.file_uploader(
-                "Upload an base image", type=["jpg", "jpeg", "png"]
-            )
-            if base_image:
-                image = Image.open(base_image)
-                image = image.resize((width, height))
-                st.image(base_image)
+            if variation_mode == "Draw":
+                drawing_mode = st.selectbox("Drawing tool:", ("freedraw", "transform"))
+                stroke_width = st.slider("Stroke width: ", 1, 25, 3)
 
-                if st.button("Generate Image"):
+                if drawing_mode == "point":
+                    point_display_radius = st.slider("Point display radius: ", 1, 25, 3)
+                stroke_color = st.color_picker("Stroke color hex: ")
+                bg_color = st.color_picker("Background color hex: ", "#eee")
+
+                background_image = None
+                bg_image = st.file_uploader("Background image:", type=["png", "jpg"])
+                if bg_image:
+                    background_image = Image.open(bg_image)
+
+                canvas_result = st_canvas(
+                    fill_color="rgba(255, 255, 255, 1.0)",  # Fixed fill color with some opacity
+                    stroke_width=stroke_width,
+                    stroke_color=stroke_color,
+                    background_color=bg_color,
+                    background_image=background_image,
+                    update_streamlit=True,
+                    height=height,
+                    width=width,
+                    drawing_mode=drawing_mode,
+                    point_display_radius=point_display_radius
+                    if drawing_mode == "point"
+                    else 0,
+                    key="canvas",
+                )
+                if canvas_result:
+                    image = canvas_result.image_data
+
+                    if background_image:
+                        image = background_image.paste(image)
+                    image = Image.fromarray(image.astype("uint8"), mode="RGBA")
+
+            elif variation_mode == "File":
+                image = st.file_uploader(
+                    "Upload an base image", type=["jpg", "jpeg", "png"]
+                )
+                if image:
+                    st.image(image)
+                    image = Image.open(image)
+                    image = image.resize((width, height))
+
+            if st.button("Generate Image"):
+                print(type(image))
+                if image:
+                    buffered = io.BytesIO()
+                    image.save(buffered, format="PNG")
+                    image = buffered.getvalue()
                     with st.spinner("生成中..."):
                         response = openai.images.create_variation(
-                            image=base_image,
+                            image=image,
                             n=num,
                             size=f"{height}x{width}",
                         )
