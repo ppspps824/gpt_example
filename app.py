@@ -241,14 +241,20 @@ if api_key:
                 image = canvas_result.image_data
                 image = Image.fromarray(image.astype("uint8"), mode="RGBA")
 
-            input_prompt = st.text_area("prompt:")
+            title = st.text_input("title:")
+            color=st.selectbox("Color",options=["モノクロ","カラー"])
+            style = st.selectbox("Style",options=["イラスト","写真","アイコン","絵画"])
 
             if st.button("Upgrade Image"):
                 if image:
                     buffered = io.BytesIO()
                     image.save(buffered, format="PNG")
                     image = buffered.getvalue()
-                    base_prompt = "この画像の作者からの説明：{input_prompt}。あなたの役割は入力された画像と説明を理解し、より詳細な画像を生成するためのプロンプトテキストを生成することです。画像が非常に簡素なものであってもできる限りの特徴を捉え、最大限に想像力を働かせて表現してください。説明等は不要ですので、必ずプロンプトテキストのみ出力してください。"
+                    base_prompt = """
+                    instructions:入力された画像と説明を理解し、より詳細な画像を生成するためのプロンプトテキストを生成すること。画像が非常に簡素なものであってもできる限りの特徴を捉え、最大限に想像力を働かせて表現してください。
+                    例えば、描かれているものが人物が動物か無機物か、性別、年齢、数、向き、時間帯、屋外か室内か、天気、季節、雰囲気など。
+                    attention:説明等は不要ですので、必ずプロンプトテキストのみ出力してください。
+                    """
                     payload = {
                         "model": "gpt-4-vision-preview",
                         "messages": [
@@ -274,6 +280,12 @@ if api_key:
                             json=payload,
                         ).json()
                         response_text = response["choices"][0]["message"]["content"]
+                        image_prompt="""
+                        title:{title}
+                        details:{response}
+                        style:{style}
+                        color:{color}
+                        """
                         st.write(response_text)
                         response = openai.images.generate(
                             model="dall-e-3",
