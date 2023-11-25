@@ -282,7 +282,7 @@ if api_key:
                         response_text = response["choices"][0]["message"]["content"]
                         image_prompt="""
                         title:{title}
-                        details:{response}
+                        details:{response_text}
                         style:{style}
                         color:{color}
                         """
