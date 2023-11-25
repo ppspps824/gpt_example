@@ -281,7 +281,7 @@ if api_key:
                             json=payload,
                         ).json()
                         response_text = response["choices"][0]["message"]["content"]
-                        image_prompt="""
+                        image_prompt=f"""
                         title:{title}
                         details:{response_text}
                         style:{style}
