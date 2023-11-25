@@ -244,6 +244,7 @@ if api_key:
             title = st.text_input("title:")
             color=st.selectbox("Color",options=["モノクロ","カラー"])
             style = st.selectbox("Style",options=["イラスト","写真","アイコン","絵画"])
+            num = st.number_input("Number of generation", step=1, min_value=1, max_value=5)
 
             if st.button("Upgrade Image"):
                 if image:
@@ -292,7 +293,7 @@ if api_key:
                             prompt=response_text,
                             size=f"{height}x{width}",
                             quality="standard",
-                            n=1,
+                            n=num
                         )
                         images = [data.url for data in response.data]
 
