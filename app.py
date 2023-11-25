@@ -287,10 +287,10 @@ if api_key:
                         style:{style}
                         color:{color}
                         """
-                        st.write(response_text)
+                        st.write(image_prompt)
                         response = openai.images.generate(
                             model="dall-e-3",
-                            prompt=response_text,
+                            prompt=image_prompt,
                             size=f"{height}x{width}",
                             quality="standard",
                             n=num
